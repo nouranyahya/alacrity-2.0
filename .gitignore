@@ -51,6 +51,7 @@ htmlcov/
 # Test files and artifacts
 SimpleApp.swift
 SimpleTestApp
+SimpleUI.swift
 *.log
 data/captures/
 
@@ -63,3 +64,7 @@ data/captures/
 
 # Application bundle
 Alacrity.app/ .env
+
+# API Keys and Environment Variables
+*.pem
+*.key

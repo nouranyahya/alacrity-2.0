@@ -6,21 +6,7 @@ import base64
 import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import time
-import threading
 from dotenv import load_dotenv
-
-# Add parent directory to sys.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-try:
-    from common import config
-    from backend.screen_capture import ScreenCapture
-    from backend.ai_interaction import AIInteraction
-except ImportError as e:
-    print(f"Error importing modules: {e}")
-    print("Make sure all dependencies are installed with: pip install -r backend/requirements.txt")
-    sys.exit(1)
 
 # Load environment variables
 load_dotenv()
@@ -37,37 +23,12 @@ if google_api_key:
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-try:
-    # Initialize components
-    screen_capture = ScreenCapture()
-    ai_interaction = AIInteraction()
-except Exception as e:
-    print(f"Error initializing components: {e}")
-    print("Check your API keys in .env file")
-    sys.exit(1)
-
-# Flag to control background capture
-capture_running = False
-capture_thread = None
-
 # Global conversation state
 conversation_history = []
 academic_mode = False
 
 # Print configuration info
 print(f"API Keys configured: OpenAI: {'Yes' if openai.api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
-
-def background_capture_task():
-    """Background task to periodically capture the screen"""
-    global capture_running
-    while capture_running:
-        try:
-            # Capture and save screen content
-            screen_capture.capture_and_process()
-            time.sleep(config.CAPTURE_INTERVAL)
-        except Exception as e:
-            print(f"Error in background capture: {e}")
-            time.sleep(5)  # Wait before retrying
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -168,49 +129,7 @@ def toggle_capture():
     # This is now handled by the frontend
     return jsonify({"status": "success"})
 
-@app.route('/api/get_windows', methods=['GET'])
-def get_windows():
-    """Get list of available windows"""
-    try:
-        windows = screen_capture.get_window_list()
-        return jsonify({'windows': windows})
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/toggle_background_capture', methods=['POST'])
-def toggle_background_capture():
-    """Toggle background screen capture"""
-    global capture_running, capture_thread
-    
-    try:
-        data = request.json
-        enable_capture = data.get('enable', False)
-        
-        if enable_capture and not capture_running:
-            # Start background capture
-            capture_running = True
-            capture_thread = threading.Thread(target=background_capture_task)
-            capture_thread.daemon = True
-            capture_thread.start()
-            return jsonify({'status': 'started'})
-        
-        elif not enable_capture and capture_running:
-            # Stop background capture
-            capture_running = False
-            if capture_thread:
-                capture_thread.join(timeout=1.0)
-            return jsonify({'status': 'stopped'})
-        
-        else:
-            # No change needed
-            status = 'running' if capture_running else 'stopped'
-            return jsonify({'status': status})
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
@@ -223,6 +142,8 @@ def health_check():
     })
 
 if __name__ == '__main__':
-    print(f"Starting Alacrity backend server on {config.BACKEND_HOST}:{config.BACKEND_PORT}")
+    host = '127.0.0.1'
+    port = 5005
+    print(f"Starting Alacrity backend server on {host}:{port}")
     print(f"API Keys configured: OpenAI: {'Yes' if openai.api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
-    app.run(host=config.BACKEND_HOST, port=config.BACKEND_PORT, debug=True) 
+    app.run(host=host, port=port, debug=True) 

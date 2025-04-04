@@ -11,55 +11,44 @@ echo ""
 osascript -e 'tell application "Alacrity" to quit' 2>/dev/null || true
 sleep 1
 
-# Start backend in background
+# Kill any existing Python backend processes
+echo "Checking for existing backend processes..."
+pkill -f "python.*backend/server.py" || true
+
+# Clean up captures directory
+echo "Cleaning up capture files..."
+if [ -d "data/captures" ]; then
+    rm -rf data/captures/*
+    echo "Capture files removed."
+else
+    mkdir -p data/captures
+    echo "Created captures directory."
+fi
+
+# Start backend server in background
 echo "Starting backend server..."
-if [ -f ".env" ]; then
-    # If already set up, just start the server
-    (source venv/bin/activate && python backend/server.py) &
-    BACKEND_PID=$!
-    echo "Backend running with PID: $BACKEND_PID"
-else
-    # If not set up, run the setup script
-    echo "First-time setup needed for backend. Enter API keys when prompted."
-    ./start_backend.sh &
-    BACKEND_PID=$!
-    echo "Backend running with PID: $BACKEND_PID"
-fi
+cd "$(dirname "$0")"
+source venv/bin/activate || source ~/.virtualenvs/alacrity/bin/activate || echo "No virtual environment found, using system Python"
+python backend/server.py &
+BACKEND_PID=$!
 
-# Give the backend server time to start
-echo "Waiting for backend to start..."
-sleep 2
+# Wait a moment for backend to start
+sleep 1
 
-# Check if app bundle exists, if not create it
-APP_PATH="$PWD/Alacrity.app"
-if [ ! -d "$APP_PATH" ]; then
-    echo "Creating Alacrity app bundle..."
-    ./create_app_bundle.sh
-else
-    echo "Using existing Alacrity app bundle..."
-    # Launch with stronger activation
-    osascript -e "tell application \"$APP_PATH\" to activate" || open -a "$APP_PATH"
-    
-    # Additional step to ensure it comes to foreground using a dedicated script
-    sleep 1
-    osascript -e '
-        tell application "Alacrity"
-            activate
-            set visible of every window to true
-        end tell
-        
-        tell application "System Events"
-            tell process "Alacrity"
-                set frontmost to true
-            end tell
-        end tell
-    ' || true
-fi
+# Start frontend app
+echo "Starting Alacrity app..."
+open "$(pwd)/Alacrity.app"
 
-echo ""
-echo "Alacrity is now running!"
-echo "Backend server (PID: $BACKEND_PID) and macOS app are active."
-echo "To stop the backend server when done, run: kill $BACKEND_PID"
+# Bring app to foreground with AppleScript
+osascript -e '
+tell application "Alacrity"
+    activate
+end tell
+'
+
+echo "Alacrity is running!"
+echo "Backend PID: $BACKEND_PID"
+
 echo ""
 echo "Press Ctrl+C to close this terminal window when you're finished."
 
