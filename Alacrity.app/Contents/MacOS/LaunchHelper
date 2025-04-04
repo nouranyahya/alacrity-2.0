@@ -1,0 +1,18 @@
+#!/bin/bash
+# Launch the app
+"/Users/nouranhussain/alacrity 2.0/app/../Alacrity.app/Contents/MacOS/Alacrity" &
+sleep 0.5
+
+# Activate it using AppleScript
+osascript -e '
+    tell application "Alacrity"
+        activate
+        set visible of every window to true
+    end tell
+    
+    tell application "System Events"
+        tell process "Alacrity"
+            set frontmost to true
+        end tell
+    end tell
+'
