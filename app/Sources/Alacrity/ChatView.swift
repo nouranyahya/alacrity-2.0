@@ -81,13 +81,13 @@ struct ChatView: View {
     @State private var scrollToBottom = false
     @Environment(\.colorScheme) var colorScheme
     
-    // iMessage colors
+    // Exact iMessage colors
     private var userBubbleColor: Color {
-        colorScheme == .dark ? Color(red: 0.0, green: 0.47, blue: 1.0) : Color(red: 0.0, green: 0.47, blue: 1.0)
+        Color(red: 0.0, green: 0.48, blue: 1.0)
     }
     
     private var assistantBubbleColor: Color {
-        colorScheme == .dark ? Color.gray.opacity(0.3) : Color(red: 0.9, green: 0.9, blue: 0.9)
+        colorScheme == .dark ? Color(red: 0.27, green: 0.27, blue: 0.3) : Color(red: 0.93, green: 0.93, blue: 0.93)
     }
     
     var body: some View {
@@ -95,7 +95,7 @@ struct ChatView: View {
             // Messages list
             ScrollViewReader { scrollView in
                 ScrollView {
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(spacing: 8) {
                         ForEach(viewModel.messages) { message in
                             MessageBubble(message: message, userBubbleColor: userBubbleColor, assistantBubbleColor: assistantBubbleColor)
                                 .id(message.id)
@@ -103,12 +103,12 @@ struct ChatView: View {
                         
                         if viewModel.isLoading {
                             HStack {
-                                Spacer()
+                                Spacer(minLength: 60)
                                 ProgressView()
                                     .scaleEffect(0.8)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 8)
-                                    .background(Color.gray.opacity(0.1))
+                                    .background(assistantBubbleColor)
                                     .cornerRadius(16)
                                 Spacer()
                             }
@@ -144,23 +144,21 @@ struct ChatView: View {
                     .padding(.top, 8)
             }
             
-            // Input area
-            HStack(spacing: 8) {
+            // Input area - styled like iMessage
+            HStack(spacing: 10) {
                 TextField("Ask Alacrity something...", text: $viewModel.inputText)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(colorScheme == .dark ? Color.gray.opacity(0.2) : Color.gray.opacity(0.1))
-                    .cornerRadius(20)
+                    .background(colorScheme == .dark ? Color(red: 0.21, green: 0.21, blue: 0.24) : Color(red: 0.93, green: 0.93, blue: 0.93))
+                    .cornerRadius(18)
                     .onSubmit {
                         viewModel.sendMessage()
                     }
                 
                 Button(action: viewModel.sendMessage) {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(6)
-                        .background(Circle().fill(userBubbleColor))
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(userBubbleColor)
                 }
                 .disabled(viewModel.inputText.isEmpty || viewModel.isLoading)
                 .buttonStyle(BorderlessButtonStyle())
@@ -193,12 +191,12 @@ struct MessageBubble: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        HStack {
+        HStack(alignment: .bottom) {
             if message.isUser {
                 Spacer(minLength: 60)
             }
             
-            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 2) {
                 Text(message.content)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -231,8 +229,8 @@ struct BubbleShape: Shape {
     let isUser: Bool
     
     func path(in rect: CGRect) -> Path {
-        let radius: CGFloat = 16
-        let smallRadius: CGFloat = 4
+        let radius: CGFloat = 18
+        let cornerRadius: CGFloat = 4
         var path = Path()
         
         if isUser {
@@ -250,9 +248,9 @@ struct BubbleShape: Shape {
                         startAngle: .degrees(270),
                         endAngle: .degrees(0),
                         clockwise: false)
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - smallRadius))
-            path.addArc(center: CGPoint(x: rect.maxX - smallRadius, y: rect.maxY - smallRadius),
-                        radius: smallRadius,
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
+            path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY - cornerRadius),
+                        radius: cornerRadius,
                         startAngle: .degrees(0),
                         endAngle: .degrees(90),
                         clockwise: false)
@@ -277,9 +275,9 @@ struct BubbleShape: Shape {
                         startAngle: .degrees(90),
                         endAngle: .degrees(180),
                         clockwise: true)
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - smallRadius))
-            path.addArc(center: CGPoint(x: rect.minX + smallRadius, y: rect.maxY - smallRadius),
-                        radius: smallRadius,
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - cornerRadius))
+            path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY - cornerRadius),
+                        radius: cornerRadius,
                         startAngle: .degrees(180),
                         endAngle: .degrees(270),
                         clockwise: true)

@@ -12,8 +12,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configure API keys
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 google_api_key = os.getenv("GOOGLE_API_KEY")
+
+# Configure OpenAI client with the API key
+client = openai.OpenAI(api_key=openai_api_key)
 
 # Configure Google Gemini API
 if google_api_key:
@@ -28,19 +31,20 @@ conversation_history = []
 academic_mode = False
 
 # Print configuration info
-print(f"API Keys configured: OpenAI: {'Yes' if openai.api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
+print(f"API Keys configured: OpenAI: {'Yes' if openai_api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
 
-@app.route('/chat', methods=['POST'])
+@app.route('/api/chat', methods=['POST'])
 def chat():
     global conversation_history
     
     data = request.json
     user_message = data.get('message', '')
     context = data.get('context', '')
+    use_screen_context = data.get('use_screen_context', False)
     
     # Extract text from context with Google Gemini if available
     context_for_openai = ""
-    if context and google_api_key:
+    if context and google_api_key and use_screen_context:
         try:
             model = genai.GenerativeModel('gemini-pro')
             screen_context = extract_text_with_gemini(context)
@@ -58,14 +62,15 @@ def chat():
     model_name = "gpt-3.5-turbo" if academic_mode else "gpt-4o-mini"
     
     try:
-        response = openai.ChatCompletion.create(
+        # Updated OpenAI API call format
+        response = client.chat.completions.create(
             model=model_name,
             messages=conversation_history,
             temperature=0.7,
             max_tokens=1000
         )
         
-        # Extract and add assistant response to history
+        # Extract and add assistant response to history (updated format)
         assistant_response = response.choices[0].message.content
         conversation_history.append({"role": "assistant", "content": assistant_response})
         
@@ -101,42 +106,48 @@ def extract_text_with_gemini(context_text):
         print(f"Error extracting text with Gemini: {e}")
         return context_text
 
-@app.route('/clear', methods=['POST'])
+@app.route('/api/clear_history', methods=['POST'])
 def clear_history():
     global conversation_history
     conversation_history = []
     return jsonify({"status": "success"})
 
-@app.route('/set_academic_mode', methods=['POST'])
+@app.route('/api/set_mode', methods=['POST'])
 def set_academic_mode():
     global academic_mode
     data = request.json
     academic_mode = data.get('academic_mode', False)
     return jsonify({"status": "success"})
 
-@app.route('/set_windows', methods=['POST'])
+@app.route('/api/set_windows', methods=['POST'])
 def set_windows():
     # This is now handled by the frontend
     return jsonify({"status": "success"})
 
-@app.route('/set_files', methods=['POST'])
+@app.route('/api/set_files', methods=['POST'])
 def set_files():
     # This is now handled by the frontend
     return jsonify({"status": "success"})
 
-@app.route('/toggle_capture', methods=['POST'])
+@app.route('/api/toggle_background_capture', methods=['POST'])
 def toggle_capture():
     # This is now handled by the frontend
     return jsonify({"status": "success"})
 
-@app.route('/health', methods=['GET'])
+@app.route('/api/get_windows', methods=['GET'])
+def get_windows():
+    """Simplified window list getter"""
+    # Return empty list as we now handle this in the frontend
+    return jsonify({"windows": []})
+
+@app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'ok',
         'version': '1.0.0',
         'api_keys': {
-            'openai': bool(openai.api_key),
+            'openai': bool(openai_api_key),
             'google': bool(google_api_key)
         }
     })
@@ -145,5 +156,5 @@ if __name__ == '__main__':
     host = '127.0.0.1'
     port = 5005
     print(f"Starting Alacrity backend server on {host}:{port}")
-    print(f"API Keys configured: OpenAI: {'Yes' if openai.api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
+    print(f"API Keys configured: OpenAI: {'Yes' if openai_api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
     app.run(host=host, port=port, debug=True) 

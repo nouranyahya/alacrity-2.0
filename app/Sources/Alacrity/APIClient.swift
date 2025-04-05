@@ -2,11 +2,11 @@ import Foundation
 import Combine
 
 struct APIClient {
-    private let baseURL = "http://127.0.0.1:5005"
+    private let baseURL = "http://127.0.0.1:5005/api"
     
     // Send a chat message to the API
     func sendChatMessage(message: String, useScreenContext: Bool = false) -> AnyPublisher<ChatResponse, Error> {
-        var parameters: [String: Any] = ["message": message]
+        var parameters: [String: Any] = ["message": message, "use_screen_context": useScreenContext]
         
         if useScreenContext {
             // Get context from the ContextCapture singleton, which now keeps only the last 5 captures in memory
@@ -19,7 +19,7 @@ struct APIClient {
     
     // Clear chat history
     func clearHistory() -> AnyPublisher<String, Error> {
-        return makeRequest(endpoint: "/clear", parameters: [:])
+        return makeRequest(endpoint: "/clear_history", parameters: [:])
             .map { _ in "Success" }
             .eraseToAnyPublisher()
     }
@@ -27,7 +27,7 @@ struct APIClient {
     // Set academic mode
     func setAcademicMode(isAcademic: Bool) -> AnyPublisher<String, Error> {
         let parameters = ["academic_mode": isAcademic]
-        return makeRequest(endpoint: "/set_academic_mode", parameters: parameters)
+        return makeRequest(endpoint: "/set_mode", parameters: parameters)
             .map { _ in "Success" }
             .eraseToAnyPublisher()
     }
@@ -51,7 +51,7 @@ struct APIClient {
     // Enable/disable background capture
     func toggleBackgroundCapture(enable: Bool) -> AnyPublisher<String, Error> {
         let parameters = ["enable": enable]
-        return makeRequest(endpoint: "/toggle_capture", parameters: parameters)
+        return makeRequest(endpoint: "/toggle_background_capture", parameters: parameters)
             .map { _ in "Success" }
             .eraseToAnyPublisher()
     }
