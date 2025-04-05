@@ -1,4 +1,5 @@
-# Alacrity - AI Assistant for macOS
+vfbg
+hjX# Alacrity - AI Assistant for macOS
 
 A native macOS AI assistant that provides context-aware responses by analyzing your screen content and files.
 

@@ -25,7 +25,7 @@ class ChatViewModel: ObservableObject {
     
     // Send a message
     func sendMessage() {
-        guard !inputText.isEmpty else { return }
+        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
         // Add user message to list
         let userMessage = ChatMessage(content: inputText, isUser: true)
@@ -177,7 +177,7 @@ struct ChatView: View {
     @ObservedObject var settings: AlacritySettings
     @Environment(\.colorScheme) var colorScheme
     
-    // Exact iMessage colors
+    // Colors for message bubbles
     private var userBubbleColor: Color {
         Color(red: 0.0, green: 0.48, blue: 1.0)
     }
@@ -191,7 +191,7 @@ struct ChatView: View {
             // Messages list
             ScrollViewReader { scrollView in
                 ScrollView {
-                    LazyVStack(spacing: 8) {
+                    LazyVStack(spacing: 12) {
                         ForEach(viewModel.messages) { message in
                             MessageBubble(message: message, userBubbleColor: userBubbleColor, assistantBubbleColor: assistantBubbleColor)
                                 .id(message.id)
@@ -239,31 +239,22 @@ struct ChatView: View {
                     .padding(.top, 8)
             }
             
-            // Input area
-            HStack(spacing: 0) {
-                NativeTextFieldWrapper(text: $viewModel.inputText, onSubmit: {
-                    viewModel.sendMessage()
-                })
-                .frame(height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(colorScheme == .dark ? Color(red: 0.21, green: 0.21, blue: 0.24) : Color(red: 0.93, green: 0.93, blue: 0.93))
-                )
-                .overlay(
-                    HStack {
-                        Spacer()
-                        if !viewModel.inputText.isEmpty {
-                            Button(action: viewModel.sendMessage) {
-                                Image(systemName: "arrow.up.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(userBubbleColor)
-                            }
-                            .disabled(viewModel.isLoading)
-                            .buttonStyle(BorderlessButtonStyle())
-                            .padding(.trailing, 6)
-                        }
+            // Input area - using standard SwiftUI TextField instead of custom wrapper
+            HStack {
+                // Use the new NSViewControllerRepresentable for text input
+                TextInputView(text: $viewModel.inputText, onSubmit: viewModel.sendMessage, colorScheme: colorScheme)
+                    .frame(height: 36)
+                
+                // Send button
+                if !viewModel.inputText.isEmpty {
+                    Button(action: viewModel.sendMessage) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(userBubbleColor)
                     }
-                )
+                    .disabled(viewModel.isLoading)
+                    .buttonStyle(BorderlessButtonStyle())
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -463,13 +454,14 @@ struct MessageBubble: View {
             
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 2) {
                 Text(message.content)
+                    .fixedSize(horizontal: false, vertical: true) // This fixes text wrapping
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(
                         message.isUser ? userBubbleColor : assistantBubbleColor
                     )
                     .foregroundColor(message.isUser ? .white : (colorScheme == .dark ? .white : .black))
-                    .clipShape(BubbleShape(isUser: message.isUser))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 
                 Text(formatDate(message.timestamp))
                     .font(.caption2)
@@ -492,141 +484,140 @@ struct MessageBubble: View {
     }
 }
 
-struct BubbleShape: Shape {
-    let isUser: Bool
-    
-    func path(in rect: CGRect) -> Path {
-        let radius: CGFloat = 16
-        let tailSize: CGFloat = 6
-        var path = Path()
-        
-        if isUser {
-            // User message - rounded with right tail
-            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + radius))
-            path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.minY + radius),
-                        radius: radius,
-                        startAngle: .degrees(180),
-                        endAngle: .degrees(270),
-                        clockwise: false)
-            path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.minY))
-            path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.minY + radius),
-                        radius: radius,
-                        startAngle: .degrees(270),
-                        endAngle: .degrees(0),
-                        clockwise: false)
-            
-            // Add tail on right side with proper curve
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - tailSize * 2))
-            path.addCurve(
-                to: CGPoint(x: rect.maxX - tailSize * 2, y: rect.maxY),
-                control1: CGPoint(x: rect.maxX, y: rect.maxY - tailSize),
-                control2: CGPoint(x: rect.maxX - tailSize, y: rect.maxY)
-            )
-            
-            path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
-            path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.maxY - radius),
-                        radius: radius,
-                        startAngle: .degrees(90),
-                        endAngle: .degrees(180),
-                        clockwise: false)
-        } else {
-            // Assistant message - rounded with left tail
-            path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + radius))
-            path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.minY + radius),
-                        radius: radius,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(90),
-                        clockwise: true)
-            path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.minY))
-            path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.minY + radius),
-                        radius: radius,
-                        startAngle: .degrees(90),
-                        endAngle: .degrees(180),
-                        clockwise: true)
-            
-            // Add tail on left side with proper curve
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - tailSize * 2))
-            path.addCurve(
-                to: CGPoint(x: rect.minX + tailSize * 2, y: rect.maxY),
-                control1: CGPoint(x: rect.minX, y: rect.maxY - tailSize),
-                control2: CGPoint(x: rect.minX + tailSize, y: rect.maxY)
-            )
-            
-            path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.maxY))
-            path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.maxY - radius),
-                        radius: radius,
-                        startAngle: .degrees(270),
-                        endAngle: .degrees(0),
-                        clockwise: true)
-        }
-        
-        return path
-    }
-}
-
-struct NativeTextFieldWrapper: NSViewRepresentable {
-    @Binding var text: String
-    var onSubmit: () -> Void
-    
-    func makeNSView(context: Context) -> NSTextField {
-        let textField = NSTextField()
-        textField.placeholderString = "Ask Alacrity something..."
-        textField.backgroundColor = .clear
-        textField.isBordered = false
-        textField.delegate = context.coordinator
-        textField.font = .systemFont(ofSize: NSFont.systemFontSize)
-        
-        // Add cell padding
-        if let textFieldCell = textField.cell as? NSTextFieldCell {
-            textFieldCell.setWantsNotificationForMarkedText(true)
-            textFieldCell.usesSingleLineMode = true
-        }
-        
-        return textField
-    }
-    
-    func updateNSView(_ nsView: NSTextField, context: Context) {
-        nsView.stringValue = text
-        
-        // Add padding to the text by adjusting the text container
-        if let editor = nsView.currentEditor() as? NSTextView {
-            editor.textContainerInset = NSSize(width: 12, height: 0)
-        }
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, NSTextFieldDelegate {
-        var parent: NativeTextFieldWrapper
-        
-        init(_ parent: NativeTextFieldWrapper) {
-            self.parent = parent
-        }
-        
-        func controlTextDidChange(_ obj: Notification) {
-            guard let textField = obj.object as? NSTextField else { return }
-            parent.text = textField.stringValue
-        }
-        
-        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
-            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
-                parent.onSubmit()
-                return true
-            }
-            return false
-        }
-    }
-}
-
 // MARK: - Helper Functions
 
 // Update app appearance
 func updateAppearance(isDark: Bool) {
     DispatchQueue.main.async {
         NSApp.appearance = isDark ? NSAppearance(named: .darkAqua) : NSAppearance(named: .aqua)
+    }
+}
+
+// MARK: - TextInputView (New Component for Text Input)
+
+struct TextInputView: NSViewControllerRepresentable {
+    @Binding var text: String
+    var onSubmit: () -> Void
+    var colorScheme: ColorScheme
+    
+    func makeNSViewController(context: Context) -> NSViewController {
+        let controller = TextInputController()
+        controller.text = text
+        controller.onTextChange = { newText in
+            text = newText
+        }
+        controller.onSubmit = onSubmit
+        controller.isDarkMode = colorScheme == .dark
+        return controller
+    }
+    
+    func updateNSViewController(_ nsViewController: NSViewController, context: Context) {
+        guard let controller = nsViewController as? TextInputController else { return }
+        if controller.text != text {
+            controller.text = text
+        }
+        controller.isDarkMode = colorScheme == .dark
+        controller.updateAppearance()
+    }
+}
+
+class TextInputController: NSViewController {
+    var text: String = ""
+    var onTextChange: ((String) -> Void)? = nil
+    var onSubmit: (() -> Void)? = nil
+    var isDarkMode: Bool = false
+    private var textField: NSTextField!
+    private var containerView: NSView!
+    
+    override func loadView() {
+        containerView = NSView()
+        self.view = containerView
+        
+        // Create text field
+        textField = NSTextField()
+        textField.placeholderString = "Ask Alacrity something..."
+        textField.backgroundColor = .clear
+        textField.isBordered = false
+        textField.delegate = self
+        textField.focusRingType = .none
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add to view
+        containerView.addSubview(textField)
+        
+        // Add constraints
+        NSLayoutConstraint.activate([
+            textField.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
+            textField.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
+            textField.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 6),
+            textField.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -6)
+        ])
+        
+        // Create a background
+        let background = NSBox()
+        background.boxType = .custom
+        background.cornerRadius = 20
+        background.fillColor = isDarkMode ? 
+            NSColor(red: 0.21, green: 0.21, blue: 0.24, alpha: 1.0) : 
+            NSColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1.0)
+        background.borderWidth = 0
+        background.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Insert the background behind the text field
+        containerView.addSubview(background, positioned: .below, relativeTo: textField)
+        
+        // Set background constraints
+        NSLayoutConstraint.activate([
+            background.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            background.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            background.topAnchor.constraint(equalTo: containerView.topAnchor),
+            background.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+        ])
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        updateTextField()
+        updateAppearance()
+    }
+    
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        view.window?.makeFirstResponder(textField)
+    }
+    
+    func updateTextField() {
+        if textField.stringValue != text {
+            textField.stringValue = text
+        }
+    }
+    
+    func updateAppearance() {
+        textField.textColor = isDarkMode ? .white : .black
+        
+        // Update background color
+        if let background = containerView.subviews.first as? NSBox {
+            background.fillColor = isDarkMode ? 
+                NSColor(red: 0.21, green: 0.21, blue: 0.24, alpha: 1.0) : 
+                NSColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1.0)
+        }
+    }
+}
+
+extension TextInputController: NSTextFieldDelegate {
+    func controlTextDidChange(_ notification: Notification) {
+        guard let textField = notification.object as? NSTextField else { return }
+        text = textField.stringValue
+        onTextChange?(text)
+    }
+    
+    func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+        if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                onSubmit?()
+            }
+            return true
+        }
+        return false
     }
 } 

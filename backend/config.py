@@ -26,5 +26,5 @@ CAPTURE_INTERVAL = 5  # seconds between automated captures
 MAX_CONTEXT_LENGTH = 4000  # maximum tokens to include from screen captures
 
 # Server settings
-BACKEND_PORT = 5005  # Changed from 5000 to avoid conflict with AirPlay
+BACKEND_PORT = 5006  # Changed from 5005 to avoid conflict
 BACKEND_HOST = "127.0.0.1"  # localhost 
