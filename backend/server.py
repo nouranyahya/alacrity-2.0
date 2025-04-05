@@ -6,21 +6,23 @@ import base64
 import google.generativeai as genai
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Configure API keys
-openai_api_key = os.getenv("OPENAI_API_KEY")
-google_api_key = os.getenv("GOOGLE_API_KEY")
+from config import (
+    OPENAI_API_KEY, 
+    GOOGLE_API_KEY, 
+    ACADEMIC_MODEL, 
+    GENERAL_MODEL,
+    ACADEMIC_SYSTEM_PROMPT,
+    GENERAL_SYSTEM_PROMPT,
+    BACKEND_HOST,
+    BACKEND_PORT
+)
 
 # Configure OpenAI client with the API key
-client = openai.OpenAI(api_key=openai_api_key)
+client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 # Configure Google Gemini API
-if google_api_key:
-    genai.configure(api_key=google_api_key)
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -31,7 +33,7 @@ conversation_history = []
 academic_mode = False
 
 # Print configuration info
-print(f"API Keys configured: OpenAI: {'Yes' if openai_api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
+print(f"API Keys configured: OpenAI: {'Yes' if OPENAI_API_KEY else 'No'}, Google: {'Yes' if GOOGLE_API_KEY else 'No'}")
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
@@ -44,7 +46,7 @@ def chat():
     
     # Extract text from context with Google Gemini if available
     context_for_openai = ""
-    if context and google_api_key and use_screen_context:
+    if context and GOOGLE_API_KEY and use_screen_context:
         try:
             model = genai.GenerativeModel('gemini-pro')
             screen_context = extract_text_with_gemini(context)
@@ -55,23 +57,29 @@ def chat():
     else:
         context_for_openai = user_message
     
-    # Add user message to history
-    conversation_history.append({"role": "user", "content": context_for_openai})
+    # Set system message based on mode
+    system_message = ACADEMIC_SYSTEM_PROMPT if academic_mode else GENERAL_SYSTEM_PROMPT
+    
+    # Prepare messages with system prompt
+    messages = [{"role": "system", "content": system_message}]
+    messages.extend(conversation_history)
+    messages.append({"role": "user", "content": context_for_openai})
     
     # Generate response using the appropriate model
-    model_name = "gpt-3.5-turbo" if academic_mode else "gpt-4o-mini"
+    model_name = ACADEMIC_MODEL if academic_mode else GENERAL_MODEL
     
     try:
         # Updated OpenAI API call format
         response = client.chat.completions.create(
             model=model_name,
-            messages=conversation_history,
+            messages=messages,
             temperature=0.7,
             max_tokens=1000
         )
         
         # Extract and add assistant response to history (updated format)
         assistant_response = response.choices[0].message.content
+        conversation_history.append({"role": "user", "content": context_for_openai})
         conversation_history.append({"role": "assistant", "content": assistant_response})
         
         # Keep conversation history limited to last 10 exchanges
@@ -147,14 +155,12 @@ def health_check():
         'status': 'ok',
         'version': '1.0.0',
         'api_keys': {
-            'openai': bool(openai_api_key),
-            'google': bool(google_api_key)
+            'openai': bool(OPENAI_API_KEY),
+            'google': bool(GOOGLE_API_KEY)
         }
     })
 
 if __name__ == '__main__':
-    host = '127.0.0.1'
-    port = 5005
-    print(f"Starting Alacrity backend server on {host}:{port}")
-    print(f"API Keys configured: OpenAI: {'Yes' if openai_api_key else 'No'}, Google: {'Yes' if google_api_key else 'No'}")
-    app.run(host=host, port=port, debug=True) 
+    print(f"Starting Alacrity backend server on {BACKEND_HOST}:{BACKEND_PORT}")
+    print(f"API Keys configured: OpenAI: {'Yes' if OPENAI_API_KEY else 'No'}, Google: {'Yes' if GOOGLE_API_KEY else 'No'}")
+    app.run(host=BACKEND_HOST, port=BACKEND_PORT, debug=True) 

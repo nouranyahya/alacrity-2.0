@@ -1,6 +1,8 @@
 import SwiftUI
 import AppKit
 
+// MARK: - App Definition
+
 struct AlacrityApp: App {
     @StateObject private var settings = AlacritySettings()
     @StateObject private var chatViewModel = ChatViewModel()
@@ -27,6 +29,9 @@ struct AlacrityApp: App {
             .onAppear {
                 appDelegate.settings = settings
                 appDelegate.ensureWindowIsVisible()
+                
+                // Start context capture when app launches
+                ContextCapture.shared.startCapture()
             }
         }
         .windowToolbarStyle(UnifiedWindowToolbarStyle())
@@ -48,6 +53,8 @@ struct AlacrityApp: App {
         NSApp.keyWindow?.firstResponder?.tryToPerform(#selector(NSSplitViewController.toggleSidebar(_:)), with: nil)
     }
 }
+
+// MARK: - App Delegate
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
@@ -112,12 +119,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    func updateAppearance(isDark: Bool) {
-        if let window = NSApp.windows.first {
-            window.appearance = isDark ? NSAppearance(named: .darkAqua) : NSAppearance(named: .aqua)
-        }
-    }
-    
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
     }
@@ -126,9 +127,38 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidBecomeActive(_ notification: Notification) {
         ensureWindowIsVisible()
     }
+    
+    // Clean up when app terminates
+    func applicationWillTerminate(_ notification: Notification) {
+        // Stop capturing screen when app closes
+        ContextCapture.shared.stopCapture()
+    }
 }
 
-// Simple content view for emergency window creation
+// MARK: - Sidebar View
+
+struct SidebarView: View {
+    @ObservedObject var settings: AlacritySettings
+    @ObservedObject var chatViewModel: ChatViewModel
+    @State private var selection: Int? = 0
+    
+    var body: some View {
+        List(selection: $selection) {
+            NavigationLink(destination: ChatView(viewModel: chatViewModel, settings: settings), tag: 0, selection: $selection) {
+                Label("Chat", systemImage: "bubble.left.and.bubble.right")
+            }
+            
+            NavigationLink(destination: SettingsView(settings: settings), tag: 1, selection: $selection) {
+                Label("Settings", systemImage: "gear")
+            }
+        }
+        .listStyle(SidebarListStyle())
+        .frame(minWidth: 220)
+    }
+}
+
+// MARK: - Content View (Fallback)
+
 struct ContentView: View {
     var body: some View {
         NavigationView {
@@ -168,25 +198,5 @@ struct ContentView: View {
                 .padding()
             }
         }
-    }
-}
-
-struct SidebarView: View {
-    @ObservedObject var settings: AlacritySettings
-    @ObservedObject var chatViewModel: ChatViewModel
-    @State private var selection: Int? = 0
-    
-    var body: some View {
-        List(selection: $selection) {
-            NavigationLink(destination: ChatView(viewModel: chatViewModel, settings: settings), tag: 0, selection: $selection) {
-                Label("Chat", systemImage: "bubble.left.and.bubble.right")
-            }
-            
-            NavigationLink(destination: SettingsView(settings: settings), tag: 1, selection: $selection) {
-                Label("Settings", systemImage: "gear")
-            }
-        }
-        .listStyle(SidebarListStyle())
-        .frame(minWidth: 220)
     }
 } 

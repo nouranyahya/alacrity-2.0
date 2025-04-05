@@ -1,34 +1,72 @@
-# Alacrity - Personal AI Assistant
+# Alacrity - AI Assistant for macOS
 
-Alacrity is a macOS-native AI assistant designed for academic and general use, providing context-aware responses by analyzing screen content.
+A native macOS AI assistant that provides context-aware responses by analyzing your screen content and files.
 
 ## Features
 
-- **Context-aware AI assistance**: Captures screen content to provide relevant responses
-- **Academic focus mode**: Optimized for university-level engineering, math, and computer science
-- **Selective screen capture**: Choose specific windows/tabs for context analysis
+- **Context-aware AI**: Analyzes your screen content or specific windows/applications
+- **Dual AI modes**: Academic mode (optimized for engineering, math, CS) or general assistance
 - **Native macOS UI**: Built with Swift and SwiftUI for a seamless experience
-- **Dual AI mode**: Choose between academic focus (GPT-3.5) or general assistance (GPT-4)
+- **File context**: Include specific files as additional context for the AI
+- **Privacy-focused**: All processing happens locally, with data sent only to AI APIs
 
-## Setup
+## Quick Setup
+
+### Prerequisites
+- macOS 12.0+
+- Python 3.8+
+- OpenAI API key ([get one here](https://platform.openai.com/api-keys))
+- Google API key ([get one here](https://makersuite.google.com/app/apikey))
+
+### Installation & Setup
 
 1. Clone this repository
-2. Install required dependencies:
-   - For backend: `pip install -r backend/requirements.txt`
-   - For macOS app: Open in Xcode and install required packages
-3. Add your API keys to `common/config.py`
-4. Run the backend server: `python backend/server.py`
-5. Build and run the macOS app in Xcode
+2. Run the single setup script:
+   ```
+   ./run.sh
+   ```
+3. When prompted, add your API keys to the `.env` file:
+   ```
+   OPENAI_API_KEY=your_openai_api_key_here
+   GOOGLE_API_KEY=your_google_api_key_here
+   ```
+
+## Usage
+
+### Basic Chat
+Type your question in the chat interface. Alacrity will analyze your screen context (if enabled) and provide relevant assistance.
+
+### Settings
+- **Screen Capture**: Enable/disable and choose between whole screen or specific windows
+- **Academic Mode**: Toggle for responses optimized for academic content
+- **Window Selection**: Choose which windows to include in the context
+- **File Context**: Select specific files to include in your queries
+
+## Example Use Cases
+
+- **Programming**: Get help debugging code visible on your screen
+- **Academic**: Ask questions about textbooks, research papers, or lecture slides
+- **Document Analysis**: Summarize or extract key information from visible documents
+- **General Assistance**: Ask any question with relevant context from your screen
 
 ## Architecture
 
-- **Swift front-end**: Native macOS UI built with SwiftUI
-- **Python backend**: Handles screen capture, text extraction, and AI model interactions
-- **API integrations**: OpenAI for chat, Gemini for image-to-text capabilities
+- **Swift Frontend**: Native macOS UI built with SwiftUI
+- **Python Backend**: Handles screen capture, text extraction, and AI communication
+- **AI Integration**: Uses OpenAI for chat and Google Gemini for image analysis
 
-## Development Timeline
+## Project Structure
 
-- Week 1: Setup and basic UI implementation
-- Week 2: Screen capture and text extraction
-- Week 3: AI model integration and context handling
-- Week 4: Final polish and refinements # alacrity-2.0
+The project has been streamlined for improved maintainability:
+
+- **app/**: Swift frontend application
+- **backend/**: Python backend server including configuration and API handlers
+- **data/captures/**: Storage for temporary screen captures
+- **Alacrity.app**: Compiled macOS application bundle
+- **run.sh**: Single unified script for setup and running the application
+
+## Troubleshooting
+
+- If the frontend doesn't connect to the backend, ensure the backend server is running
+- Check permissions if screen capture isn't working
+- Verify your API keys if you receive authentication errors
