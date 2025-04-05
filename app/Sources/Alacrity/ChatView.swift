@@ -144,27 +144,43 @@ struct ChatView: View {
                     .padding(.top, 8)
             }
             
-            // Input area - styled like iMessage
-            HStack(spacing: 10) {
-                TextField("Ask Alacrity something...", text: $viewModel.inputText)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(colorScheme == .dark ? Color(red: 0.21, green: 0.21, blue: 0.24) : Color(red: 0.93, green: 0.93, blue: 0.93))
-                    .cornerRadius(18)
-                    .onSubmit {
-                        viewModel.sendMessage()
+            // Input area exactly like iMessage
+            HStack(spacing: 0) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(colorScheme == .dark ? Color(red: 0.21, green: 0.21, blue: 0.24) : Color(red: 0.93, green: 0.93, blue: 0.93))
+                        .frame(height: 36)
+                    
+                    HStack(spacing: 8) {
+                        TextField("Ask Alacrity something...", text: $viewModel.inputText)
+                            .padding(.leading, 12)
+                            .padding(.trailing, viewModel.inputText.isEmpty ? 12 : 40)
+                            .onSubmit {
+                                viewModel.sendMessage()
+                            }
+                        
+                        Spacer(minLength: 0)
                     }
-                
-                Button(action: viewModel.sendMessage) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(userBubbleColor)
+                    
+                    // Position the send button at the trailing edge of the text field
+                    if !viewModel.inputText.isEmpty {
+                        HStack {
+                            Spacer()
+                            Button(action: viewModel.sendMessage) {
+                                Image(systemName: "arrow.up.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(userBubbleColor)
+                            }
+                            .disabled(viewModel.isLoading)
+                            .buttonStyle(BorderlessButtonStyle())
+                            .padding(.trailing, 6)
+                            .padding(.leading, 6) // Touch target
+                        }
+                    }
                 }
-                .disabled(viewModel.inputText.isEmpty || viewModel.isLoading)
-                .buttonStyle(BorderlessButtonStyle())
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.vertical, 8)
             .background(
                 colorScheme == .dark ? Color.black : Color.white
             )
@@ -193,7 +209,7 @@ struct MessageBubble: View {
     var body: some View {
         HStack(alignment: .bottom) {
             if message.isUser {
-                Spacer(minLength: 60)
+                Spacer(minLength: 40)
             }
             
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 2) {
@@ -213,7 +229,7 @@ struct MessageBubble: View {
             }
             
             if !message.isUser {
-                Spacer(minLength: 60)
+                Spacer(minLength: 40)
             }
         }
     }
@@ -229,12 +245,12 @@ struct BubbleShape: Shape {
     let isUser: Bool
     
     func path(in rect: CGRect) -> Path {
-        let radius: CGFloat = 18
-        let cornerRadius: CGFloat = 4
+        let radius: CGFloat = 16
+        let tailSize: CGFloat = 6
         var path = Path()
         
         if isUser {
-            // User message - rounded with right point
+            // User message - rounded with right tail
             path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + radius))
             path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.minY + radius),
@@ -248,12 +264,15 @@ struct BubbleShape: Shape {
                         startAngle: .degrees(270),
                         endAngle: .degrees(0),
                         clockwise: false)
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - cornerRadius))
-            path.addArc(center: CGPoint(x: rect.maxX - cornerRadius, y: rect.maxY - cornerRadius),
-                        radius: cornerRadius,
-                        startAngle: .degrees(0),
-                        endAngle: .degrees(90),
-                        clockwise: false)
+            
+            // Add tail on right side with proper curve
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - tailSize * 2))
+            path.addCurve(
+                to: CGPoint(x: rect.maxX - tailSize * 2, y: rect.maxY),
+                control1: CGPoint(x: rect.maxX, y: rect.maxY - tailSize),
+                control2: CGPoint(x: rect.maxX - tailSize, y: rect.maxY)
+            )
+            
             path.addLine(to: CGPoint(x: rect.minX + radius, y: rect.maxY))
             path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.maxY - radius),
                         radius: radius,
@@ -261,7 +280,7 @@ struct BubbleShape: Shape {
                         endAngle: .degrees(180),
                         clockwise: false)
         } else {
-            // Assistant message - rounded with left point
+            // Assistant message - rounded with left tail
             path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + radius))
             path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.minY + radius),
@@ -275,12 +294,15 @@ struct BubbleShape: Shape {
                         startAngle: .degrees(90),
                         endAngle: .degrees(180),
                         clockwise: true)
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - cornerRadius))
-            path.addArc(center: CGPoint(x: rect.minX + cornerRadius, y: rect.maxY - cornerRadius),
-                        radius: cornerRadius,
-                        startAngle: .degrees(180),
-                        endAngle: .degrees(270),
-                        clockwise: true)
+            
+            // Add tail on left side with proper curve
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - tailSize * 2))
+            path.addCurve(
+                to: CGPoint(x: rect.minX + tailSize * 2, y: rect.maxY),
+                control1: CGPoint(x: rect.minX, y: rect.maxY - tailSize),
+                control2: CGPoint(x: rect.minX + tailSize, y: rect.maxY)
+            )
+            
             path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.maxY))
             path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.maxY - radius),
                         radius: radius,
